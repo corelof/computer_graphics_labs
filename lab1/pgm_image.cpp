@@ -1,7 +1,7 @@
 #include "pgm_image.h"
 
 PGM_Image::PGM_Image(string filename) {
-    ifstream fin(filename);
+    ifstream fin(filename, ios::binary);
     char cc;
     fin >> cc >> cc;
     fin >> width >> height >> color_depth;
@@ -21,7 +21,7 @@ PGM_Image::PGM_Image(string filename) {
 }
 
 void PGM_Image::drop(string filename) {
-    ofstream fout(filename);
+    ofstream fout(filename, ios::binary);
     if(!fout.is_open()) {
         throw runtime_error("cannot open output file");
     }

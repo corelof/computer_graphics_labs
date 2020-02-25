@@ -17,7 +17,7 @@ int main(int argc, char *argv[]) {
 
     PNM_Image* image;
 
-    ifstream inFile(fin);
+    ifstream inFile(fin, ios::binary);
     if(!inFile.is_open()) {
         cout << "file isn't opened. Check permissions / file existance" << endl;
         exit(0);
@@ -47,21 +47,25 @@ int main(int argc, char *argv[]) {
         cout << e.what() << endl;
         exit(0);
     }
-
-    for(auto i : operations)
-        if(i == '0')
-            image -> inverse_colors();
-        else if(i == '1')
-            image -> reflect_horizontal();
-        else if(i == '2')
-            image -> reflect_verical();
-        else if(i == '3')
-            image -> rotate_right();
-        else if(i == '4')
-            image -> rotate_left();
-        else 
-            throw runtime_error("operation not supported");
-
+    try {
+        for(auto i : operations)
+            if(i == '0')
+                image -> inverse_colors();
+            else if(i == '1')
+                image -> reflect_horizontal();
+            else if(i == '2')
+                image -> reflect_verical();
+            else if(i == '3')
+                image -> rotate_right();
+            else if(i == '4')
+                image -> rotate_left();
+            else 
+                throw runtime_error("operation not supported");
+    }
+    catch (const exception& e) {
+        cout << e.what() << endl;
+        exit(0);
+    }
     try { image -> drop(fout); }
     catch (const exception& e) {
         cout << e.what() << endl;

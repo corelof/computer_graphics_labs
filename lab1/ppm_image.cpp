@@ -1,7 +1,7 @@
 #include "ppm_image.h"
 
 PPM_Image::PPM_Image(string filename) {
-    ifstream fin(filename);
+    ifstream fin(filename, ios::binary);
     char cc;
     fin >> cc >> cc;
     fin >> width >> height >> color_depth;
@@ -23,7 +23,7 @@ PPM_Image::PPM_Image(string filename) {
 }
 
 void PPM_Image::drop(string filename) {
-    ofstream fout(filename);
+    ofstream fout(filename, ios::binary);
     if(!fout.is_open()) {
         throw runtime_error("cannot open output file");
     }
