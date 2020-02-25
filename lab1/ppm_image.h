@@ -6,13 +6,14 @@
 #include <tuple>
 #include <fstream>
 #include "pnm_image.h"
+typedef tuple<unsigned char, unsigned char, unsigned char> color;
 
 using namespace std;
 
 class PPM_Image: public PNM_Image{
     private:
         int width, height, color_depth;
-        vector<vector<tuple<int, int, int>>> image;
+        vector<vector<color>> image;
     public:
         PPM_Image(string);
         void inverse_colors();

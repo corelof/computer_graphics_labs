@@ -6,13 +6,16 @@ PPM_Image::PPM_Image(string filename) {
     fin >> cc >> cc;
     fin >> width >> height >> color_depth;
     fin.read(&cc, 1);
-    image.assign(height, vector<tuple<int, int, int>>(width));
+    image.assign(height, vector<color>(width));
 
     char col[3];
     for(int i = 0; i < height; i ++)
         for(int j = 0; j < width; j ++)
         {
-            if(fin.eof()) throw runtime_error("some pixels not found");
+            if(fin.eof()) {
+                fin.close();
+                throw runtime_error("some pixels not found");
+            }
             fin.read(col, 3);
             image[i][j] = {col[0], col[1], col[2]};
         }
@@ -39,7 +42,7 @@ void PPM_Image::inverse_colors() {
 }
 
 void PPM_Image::rotate_right() {
-    vector<vector<tuple<int, int, int>>> new_image(width, vector<tuple<int, int, int>>(height));
+    vector<vector<color>> new_image(width, vector<color>(height));
     for(int i = 0; i < height; i ++)
         for(int j = 0; j < width; j ++)
             new_image[j][height - i - 1] = image[i][j];
@@ -48,7 +51,7 @@ void PPM_Image::rotate_right() {
 }
 
 void PPM_Image::rotate_left() {
-    vector<vector<tuple<int, int, int>>> new_image(width, vector<tuple<int, int, int>>(height));
+    vector<vector<color>> new_image(width, vector<color>(height));
     for(int i = 0; i < height; i ++)
         for(int j = 0; j < width; j ++)
             new_image[width - j - 1][i] = image[i][j];

@@ -5,13 +5,16 @@ PGM_Image::PGM_Image(string filename) {
     char cc;
     fin >> cc >> cc;
     fin >> width >> height >> color_depth;
-    image.assign(height, vector<int>(width));
+    image.assign(height, vector<unsigned char>(width));
     fin.read(&cc, 1);
     for(int i = 0; i < height; i ++)
         for(int j = 0; j < width; j ++)
         {
-            if(fin.eof()) throw runtime_error("some pixels not found");
-            fin.read(&cc, sizeof(char));
+            if(fin.eof()) {
+                fin.close();
+                throw runtime_error("some pixels not found");
+            }
+            fin.read(&cc, sizeof(unsigned char));
             image[i][j] = cc;
         }
     fin.close();
@@ -25,7 +28,7 @@ void PGM_Image::drop(string filename) {
     fout << "P5\n" << width << ' ' << height << '\n' << color_depth << '\n';
     for(int i = 0; i < height; i ++)
         for(int j = 0; j < width; j ++)
-            fout << char(image[i][j]);
+            fout << (unsigned char)(image[i][j]);
     fout.flush();
     fout.close();
 }
@@ -37,7 +40,7 @@ void PGM_Image::inverse_colors() {
 }
 
 void PGM_Image::rotate_right() {
-    vector<vector<int>> new_image(width, vector<int>(height, 0));
+    vector<vector<unsigned char>> new_image(width, vector<unsigned char>(height, 0));
     for(int i = 0; i < height; i ++)
         for(int j = 0; j < width; j ++)
             new_image[j][height - i - 1] = image[i][j];
@@ -46,7 +49,7 @@ void PGM_Image::rotate_right() {
 }
 
 void PGM_Image::rotate_left() {
-    vector<vector<int>> new_image(width, vector<int>(height, 0));
+    vector<vector<unsigned char>> new_image(width, vector<unsigned char>(height, 0));
     for(int i = 0; i < height; i ++)
         for(int j = 0; j < width; j ++)
             new_image[width - j - 1][i] = image[i][j];

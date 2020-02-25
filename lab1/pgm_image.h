@@ -10,7 +10,7 @@ using namespace std;
 class PGM_Image: public PNM_Image{
     private:
         int width, height, color_depth;
-        vector<vector<int>> image;
+        vector<vector<unsigned char>> image;
     public:
         PGM_Image(string);
         void inverse_colors();

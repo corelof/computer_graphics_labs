@@ -22,7 +22,7 @@ int main(int argc, char *argv[]) {
         cout << "file isn't opened. Check permissions / file existance" << endl;
         exit(0);
     }
-    char format[2];
+    unsigned char format[2];
     for(int i = 0; i < 2; i ++)
         if(!inFile.eof())
             inFile >> format[i];
@@ -59,9 +59,8 @@ int main(int argc, char *argv[]) {
             image -> rotate_right();
         else if(i == '4')
             image -> rotate_left();
-        else {
-            cout << "operation " << i << " not found, skipping" << endl;
-        }
+        else 
+            throw runtime_error("operation not supported");
 
     try { image -> drop(fout); }
     catch (const exception& e) {
