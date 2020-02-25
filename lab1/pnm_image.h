@@ -1,7 +1,7 @@
 #pragma once
 
-#include <bits/stdc++.h>
-
+#include <string>
+#include <fstream>
 using namespace std;
 
 class PNM_Image{

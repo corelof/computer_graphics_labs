@@ -1,5 +1,8 @@
 #pragma once
-#include <bits/stdc++.h>
+#include <vector>
+#include <algorithm>
+#include <stdexcept>
+#include <fstream>
 #include "pnm_image.h"
 
 using namespace std;

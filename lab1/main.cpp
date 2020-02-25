@@ -1,4 +1,5 @@
-#include <bits/stdc++.h>
+#include <iostream>
+#include <string>
 #include "pgm_image.h"
 #include "ppm_image.h"
 #include "pnm_image.h"
