@@ -7,7 +7,7 @@ using namespace std;
 int main(int argc, char *argv[]) {
     if(argc != 9 && argc != 10) {
         cerr << "command line arguments are invalid" << endl;
-        exit(1);
+        return 1;
     }
     string fin = string(argv[1]);
     string fout = string(argv[2]);
@@ -17,14 +17,14 @@ int main(int argc, char *argv[]) {
     try {
         brightness = atoi(argv[3]);
         thikness = stod(argv[4]);
-        y_s = stod(argv[5]);
-        x_s = stod(argv[6]);
-        y_f = stod(argv[7]);
-        x_f = stod(argv[8]);
+        x_s = stod(argv[5]);
+        y_s = stod(argv[6]);
+        x_f = stod(argv[7]);
+        y_f = stod(argv[8]);
     }
     catch (const exception& e) {
         cerr << e.what() << endl;
-        exit(1);
+        return 1;
     }
     if(argc == 10) {
         try {
@@ -33,7 +33,7 @@ int main(int argc, char *argv[]) {
         }
         catch (const exception& e) {
         cerr << e.what() << endl;
-        exit(1);
+        return 1;
         } 
     }
 
@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
     }
     catch (const exception& e) {
         cerr << e.what() << endl;
-        exit(1);
+        return 1;
     }
 
     image -> draw_line(Point{x_s, y_s}, Point{x_f, y_f}, thikness, brightness, gamma, srgb);
@@ -54,6 +54,6 @@ int main(int argc, char *argv[]) {
     }
     catch (const exception& e) {
         cerr << e.what() << endl;
-        exit(1);
+        return 1;
     }
 }
