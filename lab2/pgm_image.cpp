@@ -66,7 +66,12 @@ void PGM_Image::plot(int x, int y, double brightness, int color, bool rot, doubl
     else
         old = pow(old, gamma);
     old *= (1.0 - brightness);
-    old += brightness * color / 255.0;
+    double corrected_color = color * 1.0 / 255;
+    if(srgb)
+        corrected_color = (corrected_color < 0.04045 ? corrected_color / 12.92 : pow((corrected_color + 0.055) / 1.055, gamma));
+    else
+        corrected_color = pow(corrected_color, gamma);
+    old += brightness * corrected_color;
     if(srgb)
         old = (old <= 0.0031308 ? old * 12.92 : pow(old,  1.0/gamma)*1.055 - 0.055);
     else
