@@ -53,7 +53,7 @@ void PGM_Image::drop(string filename) {
     fout.close();
 }
 
-void PGM_Image::plot(int x, int y, double brightness, int color, bool rot) {
+void PGM_Image::plot(int x, int y, double brightness, int color, bool rot, double gamma, bool srgb) {
     if(rot) {
         swap(x, y);
     }
@@ -61,14 +61,21 @@ void PGM_Image::plot(int x, int y, double brightness, int color, bool rot) {
         return;
     }
     double old = double((unsigned char)image[y][x]) / color_depth;
-    old = (old < 0.04045 ? old / 12.92 : pow((old + 0.055) / 1.055, 2.4));
+    if(srgb)
+        old = (old < 0.04045 ? old / 12.92 : pow((old + 0.055) / 1.055, gamma));
+    else
+        old = pow(old, gamma);
     old *= (1.0 - brightness);
     old += brightness * color / 255.0;
-    old = (old <= 0.0031308 ? old * 12.92 : pow(1.055 * old,  0.416) - 0.055);
-    image[y][x] = old * color_depth;
+    if(srgb)
+        old = (old <= 0.0031308 ? old * 12.92 : pow(old,  1.0/gamma)*1.055 - 0.055);
+    else
+        old = pow(old, 1.0 / gamma);
+    if(old >= 0.9999) old = 1.0;
+    image[y][x] = color_depth * old;
 }
 
-void PGM_Image::draw_line(Point begin, Point end, double thikness, int color) {
+void PGM_Image::draw_line(Point begin, Point end, double thikness, int color, double gamma, bool srgb) {
     bool rot = abs(begin.x - end.x) < abs(begin.y - end.y);
     if(rot) {
         swap(begin.x, begin.y);
@@ -84,14 +91,14 @@ void PGM_Image::draw_line(Point begin, Point end, double thikness, int color) {
         y = find_y(plotX, grad, begin);
         Point point(round(begin.x), find_y(round(begin.x), grad, begin));
         for(int plotY = int(y - (thikness - 1) / 2.0); plotY <= int(y - (thikness - 1) / 2.0 + thikness); plotY++) {
-            plot(plotX, plotY, min(1.0, (thikness + 1.0) / 2.0 - dist(plotX, plotY, point.x, point.y)), color, rot);
+            plot(plotX, plotY, min(1.0, (thikness + 1.0) / 2.0 - dist(plotX, plotY, point.x, point.y)), color, rot, gamma, srgb);
         }
     }
     // draw line
     for(int plotX = round(begin.x); plotX <= round(end.x); plotX++, y += grad) {
         y = find_y(plotX, grad, begin);
         for(int plotY = int(y - (thikness - 1) / 2.0); plotY <= int(y - (thikness - 1) / 2.0 + thikness); plotY++) {
-            plot(plotX, plotY, min(1.0, (thikness + 1.0) / 2.0 - fabs(y - plotY)), color, rot);
+            plot(plotX, plotY, min(1.0, (thikness + 1.0) / 2.0 - fabs(y - plotY)), color, rot, gamma, srgb);
         }
     }
     // draw line end
@@ -99,7 +106,7 @@ void PGM_Image::draw_line(Point begin, Point end, double thikness, int color) {
         y = find_y(plotX, grad, begin);
         Point point(round(end.x), find_y(round(end.x), grad, begin));
         for(int plotY = int(y - (thikness - 1) / 2.0); plotY <= int(y - (thikness - 1) / 2.0 + thikness); plotY++) {
-            plot(plotX, plotY, min(1.0, (thikness + 1.0) / 2.0 - dist(plotX, plotY, point.x, point.y)), color, rot);
+            plot(plotX, plotY, min(1.0, (thikness + 1.0) / 2.0 - dist(plotX, plotY, point.x, point.y)), color, rot, gamma, srgb);
         }
     }
 }

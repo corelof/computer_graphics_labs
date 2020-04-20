@@ -5,26 +5,37 @@
 using namespace std;
 
 int main(int argc, char *argv[]) {
-    if(argc != 9) {
+    if(argc != 9 && argc != 10) {
         cerr << "command line arguments are invalid" << endl;
         exit(1);
     }
     string fin = string(argv[1]);
     string fout = string(argv[2]);
-    int brightness, x_s, y_s, x_f, y_f;
+    double thikness, x_s, y_s, x_f, y_f, gamma = 2.4;
+    bool srgb = true;
+    int brightness;
     try {
         brightness = atoi(argv[3]);
-        x_s = atoi(argv[5]);
-        y_s = atoi(argv[6]);
-        x_f = atoi(argv[7]);
-        y_f =atoi(argv[8]);
+        thikness = stod(argv[4]);
+        y_s = stod(argv[5]);
+        x_s = stod(argv[6]);
+        y_f = stod(argv[7]);
+        x_f = stod(argv[8]);
     }
     catch (const exception& e) {
         cerr << e.what() << endl;
         exit(1);
     }
-
-    double thikness = stod(argv[4]);
+    if(argc == 10) {
+        try {
+            gamma = stod(argv[9]);
+            srgb = false;
+        }
+        catch (const exception& e) {
+        cerr << e.what() << endl;
+        exit(1);
+        } 
+    }
 
     PGM_Image* image;
     try {    
@@ -35,10 +46,11 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
-    image -> draw_line(*(new Point(x_s, y_s)), *(new Point(x_f, y_f)), thikness, brightness);
+    image -> draw_line(Point{x_s, y_s}, Point{x_f, y_f}, thikness, brightness, gamma, srgb);
 
     try {
         image -> drop(fout);
+        delete(image);
     }
     catch (const exception& e) {
         cerr << e.what() << endl;
