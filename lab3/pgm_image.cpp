@@ -14,10 +14,10 @@ vector<vector<double> > OrderedDitheringMatrix = {
     {42, 26, 38, 22, 41, 25, 37, 21},
 },
 HalftoneMatrix = {
-    {4, 2, 7, 5},
-    {3, 1, 8, 6},
-    {7, 5, 4, 2},
-    {8, 6, 3, 1},
+    {7, 13, 11, 4},
+    {12, 16, 14, 8},
+    {10, 15, 6, 2},
+    {5, 9, 3, 1},
 };
 
 PGM_Image::PGM_Image(string filename, bool gradient, double gamma, bool srgb) {
@@ -30,7 +30,7 @@ PGM_Image::PGM_Image(string filename, bool gradient, double gamma, bool srgb) {
     if(cc[0] != 'P' || cc[1] != '5')
         throw runtime_error("expected P5 format");
     fin >> width >> height >> color_depth;
-    image.assign(height, vector<double>(width));
+    image.assign(height, vector<unsigned char>(width));
     if(!gradient) {
         char pixel;
         fin.read(&pixel, 1);
@@ -43,17 +43,18 @@ PGM_Image::PGM_Image(string filename, bool gradient, double gamma, bool srgb) {
                     old = (old < 0.04045 ? old / 12.92 : pow((old + 0.055) / 1.055, gamma));
                 else
                     old = pow(old, gamma);
-                image[i][j] = old;
+                image[i][j] = round(old * color_depth);
             }
     } else {
         for(int i = 0; i < height; i ++)
             for(int j = 0; j < width; j ++)
-            image[i][j] = j*ld1 / (width - 1);
+                image[i][j] = round(j*ld1 / (width - 1) * color_depth);
     }
     fin.close();
 }
 
 void PGM_Image::drop(string filename, double gamma, bool srgb, int bit) {
+    int ocd = color_depth;
     color_depth = (1 << bit) - 1;
     ofstream fout(filename, ios::binary);
     if(!fout.is_open()) {
@@ -63,13 +64,12 @@ void PGM_Image::drop(string filename, double gamma, bool srgb, int bit) {
     for(int i = 0; i < height; i ++)
         for(int j = 0; j < width; j ++)
         {
-            double old = (double)image[i][j];
+            double old = (double)image[i][j] / ocd;
             if(srgb)
                 old = (old <= 0.0031308 ? old * 12.92 : pow(old,  ld1/gamma)*1.055 - 0.055);
             else
                 old = pow(old, ld1 / gamma);
-            int color = old * color_depth;
-            if(color_depth == 1 && old >= 0.999) color = 1;
+            int color = round(old * color_depth);
             fout << (unsigned char)color;
         }
     fout.flush();
@@ -77,26 +77,23 @@ void PGM_Image::drop(string filename, double gamma, bool srgb, int bit) {
 }
 
 void PGM_Image::dither(int bit, int algo, double gamma, bool srgb) {
-    vector<double> palette;
-    double step = color_depth / ((1 << bit) - 1);
-    for(double cur = 0.0; cur <= color_depth; cur += step)
-    {
-        if(cur - color_depth >= 0.01) break;
-        double old = cur / color_depth;
-        if(srgb)
-            old = (old < 0.04045 ? old / 12.92 : pow((old + 0.055) / 1.055, gamma));
-        else
-            old = pow(old, gamma);
-        palette.push_back(old);
-    }
-    auto nearest_color = [&palette](double pixel_color){
-        double ans = 0.0, diff = 1.0;
-        for(auto i : palette)
-            if(fabs(i - pixel_color) < diff) {
-                diff = fabs(i - pixel_color);
-                ans = i;
-            }
-        return ans;
+    auto nearest_color = [&bit](int pixel_color){
+        vector<unsigned char> res(8);
+        vector<unsigned char> mask;
+        int idx = 7;
+        for(int i = 0; i < bit; i ++) {
+            mask.push_back((pixel_color >> idx) % 2);
+            idx--;
+        }
+        idx = 0;
+        for(int i = 0; i < 8; i ++) {
+            res[i] = mask[idx];
+            idx = (idx + 1) % mask.size();
+        }
+        int cl = 0;
+        for(auto i : res)
+            cl = cl * 2 + i;
+        return cl;
     };
 
     // No dithering
@@ -112,21 +109,24 @@ void PGM_Image::dither(int bit, int algo, double gamma, bool srgb) {
         for(int i = 0; i < height; i ++)
             for(int j = 0; j < width; j ++)
                 image[i][j] = nearest_color(image[i][j] + (OrderedDitheringMatrix[i%8][j%8] * ld1 / 64) - 0.5);
+        return;
     }
     // Random
     if(algo == 2) {
         for(int i = 0; i < height; i ++)
             for(int j = 0; j < width; j ++)
                 image[i][j] = nearest_color(image[i][j] + ((double) rand() / (RAND_MAX)) - 0.5);
+        return;
     }
     // Halftone 4x4
     if(algo == 7) {
         for(int i = 0; i < height; i ++)
             for(int j = 0; j < width; j ++)
                 image[i][j] = nearest_color(image[i][j] + (HalftoneMatrix[i%4][j%4] * ld1 / 8 - 0.5));
+        return;
     }
 
-    err.assign(height, vector<double>(width, 0));
+    err.assign(height, vector<unsigned char>(width, 0));
     // Floyd–Steinberg
     if(algo == 3) {
         for(int i = 0; i < height; i ++)
@@ -230,5 +230,4 @@ void PGM_Image::dither(int bit, int algo, double gamma, bool srgb) {
             }
         return;
     }
-    // TODO halftone
 }
