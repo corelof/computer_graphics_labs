@@ -69,7 +69,7 @@ void PGM_Image::drop(string filename, double gamma, bool srgb, int bit) {
                 old = (old <= 0.0031308 ? old * 12.92 : pow(old,  ld1/gamma)*1.055 - 0.055);
             else
                 old = pow(old, ld1 / gamma);
-            int color = round(old * color_depth);
+            int color = old * color_depth;
             fout << (unsigned char)color;
         }
     fout.flush();
@@ -77,7 +77,10 @@ void PGM_Image::drop(string filename, double gamma, bool srgb, int bit) {
 }
 
 void PGM_Image::dither(int bit, int algo, double gamma, bool srgb) {
-    auto nearest_color = [&bit](int pixel_color){
+    auto nearest_color = [&bit, this](int pixel_color){
+        if(pixel_color < 0) pixel_color = 0;
+        if(pixel_color > color_depth) pixel_color = color_depth;
+        
         vector<unsigned char> res(8);
         vector<unsigned char> mask;
         int idx = 7;
@@ -108,21 +111,21 @@ void PGM_Image::dither(int bit, int algo, double gamma, bool srgb) {
     if(algo == 1) {
         for(int i = 0; i < height; i ++)
             for(int j = 0; j < width; j ++)
-                image[i][j] = nearest_color(image[i][j] + (OrderedDitheringMatrix[i%8][j%8] * ld1 / 64) - 0.5);
+                image[i][j] = nearest_color(image[i][j] + (color_depth + 1) / 64 *(OrderedDitheringMatrix[i%8][j%8] - 32));
         return;
     }
     // Random
     if(algo == 2) {
         for(int i = 0; i < height; i ++)
             for(int j = 0; j < width; j ++)
-                image[i][j] = nearest_color(image[i][j] + ((double) rand() / (RAND_MAX)) - 0.5);
+                image[i][j] = nearest_color(image[i][j] + rand() % (color_depth+1) - (color_depth+1) / 2);
         return;
     }
     // Halftone 4x4
     if(algo == 7) {
         for(int i = 0; i < height; i ++)
             for(int j = 0; j < width; j ++)
-                image[i][j] = nearest_color(image[i][j] + (HalftoneMatrix[i%4][j%4] * ld1 / 8 - 0.5));
+                image[i][j] = nearest_color(image[i][j] + (color_depth + 1) / 16 *(HalftoneMatrix[i%4][j%4] - 8));
         return;
     }
 
@@ -133,8 +136,8 @@ void PGM_Image::dither(int bit, int algo, double gamma, bool srgb) {
             for(int j = 0; j < width; j ++)
             {
                 image[i][j] += err[i][j];
-                double nc = nearest_color(image[i][j]);
-                double error = (image[i][j] - nc) / 16;
+                int nc = nearest_color(image[i][j]);
+                int error = (image[i][j] - nc) / 16;
                 image[i][j] = nc;
                 if(j + 1 < width)
                     err[i][j+1] += error * 7;
@@ -154,8 +157,8 @@ void PGM_Image::dither(int bit, int algo, double gamma, bool srgb) {
             for(int j = 0; j < width; j ++)
             {
                 image[i][j] += err[i][j];
-                double nc = nearest_color(image[i][j]);
-                double error = (image[i][j] - nc) / 48;
+                int nc = nearest_color(image[i][j]);
+                int error = (image[i][j] - nc) / 48;
                 image[i][j] = nc;
                 if(j + 1 < width) err[i][j+1] += error * 7;
                 if(j + 2 < width) err[i][j+2] += error * 5;
@@ -184,8 +187,8 @@ void PGM_Image::dither(int bit, int algo, double gamma, bool srgb) {
             for(int j = 0; j < width; j ++)
             {
                 image[i][j] += err[i][j];
-                double nc = nearest_color(image[i][j]);
-                double error = (image[i][j] - nc) / 32;
+                int nc = nearest_color(image[i][j]);
+                int error = (image[i][j] - nc) / 32;
                 image[i][j] = nc;
                 if(j + 1 < width) err[i][j+1] += error * 5;
                 if(j + 2 < width) err[i][j+2] += error * 3;
@@ -212,8 +215,8 @@ void PGM_Image::dither(int bit, int algo, double gamma, bool srgb) {
             for(int j = 0; j < width; j ++)
             {
                 image[i][j] += err[i][j];
-                double nc = nearest_color(image[i][j]);
-                double error = (image[i][j] - nc) / 8;
+                int nc = nearest_color(image[i][j]);
+                int error = (image[i][j] - nc) / 8;
                 image[i][j] = nc;
                 if(j + 1 < width) err[i][j+1] += error;
                 if(j + 2 < width) err[i][j+2] += error;
