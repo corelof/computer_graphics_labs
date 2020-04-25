@@ -26,7 +26,7 @@ bool point_in_rect(Point p1, Point p2, Point p3, Point p4, Point pp) {
     double w = sqrt((p1.x - p3.x) * (p1.x - p3.x) + (p1.y - p3.y) * (p1.y - p3.y));
     double rect_size = h * w;
     double tr_size = triangle_size(pp, p1, p2) + triangle_size(pp, p1, p3) + triangle_size(pp, p3, p4) + triangle_size(pp, p4, p2);
-    return fabs(rect_size - tr_size) < 1e-9;
+    return fabs(rect_size - tr_size) < 1e-5;
 }
 
 double intersection_size(Point p1, Point p2, Point p3, Point p4, int px, int py) {
@@ -37,8 +37,8 @@ double intersection_size(Point p1, Point p2, Point p3, Point p4, int px, int py)
         point_in_rect(p1, p2, p3, p4, Point{px+1.0, py+1.0})
     ) return 1.0;
     int ins = 0, totp = 0;
-    for(double i = px; i <= px + 1; i += 0.1)
-        for(double j = py; j <= py + 1; j += 1)
+    for(double i = px + 0.1; i + 0.1 <= px + 1; i += 0.1)
+        for(double j = py + 0.1; j + 0.1 <= py + 1; j += 0.1)
         {
             totp ++;
             if(point_in_rect(p1, p2, p3, p4, Point{i, j}))
@@ -113,13 +113,14 @@ void PGM_Image::plot(int x, int y, double brightness, int color, double gamma, b
 
 void PGM_Image::draw_line(Point begin, Point end, double thikness, int color, double gamma, bool srgb) {
     Point line_vector = {end.x - begin.x, end.y - begin.y};
-    Point th_vector = {-line_vector.y / line_vector.x, 1.0};
+    Point th_vector = {1.0, 0.0};
+    if(line_vector.x != 0)
+        th_vector = {-line_vector.y / line_vector.x, 1.0};
     double thikness_coef = sqrt((thikness*thikness / 4) / (th_vector.x*th_vector.x + th_vector.y*th_vector.y));
     Point p1 = {begin.x + thikness_coef*th_vector.x, begin.y + thikness_coef*th_vector.y};
     Point p2 = {begin.x - thikness_coef*th_vector.x, begin.y - thikness_coef*th_vector.y};
     Point p3 = {end.x + thikness_coef*th_vector.x, end.y + thikness_coef*th_vector.y};
     Point p4 = {end.x - thikness_coef*th_vector.x, end.y - thikness_coef*th_vector.y};
-
     for(int i = max(0, int(min(min(p1.y, p2.y), min(p3.y, p4.y))) - 3); i < min(height, int(max(max(p1.y, p2.y), max(p3.y, p4.y))) + 3); i ++)
         for(int j = max(0, int(min(min(p1.x, p2.x), min(p3.x, p4.x))) - 3); j < min(width, int(max(max(p1.x, p2.x), max(p3.x, p4.x))) + 3); j ++) {
             plot(j, i, intersection_size(p1, p2, p3, p4, j, i), color, gamma, srgb);
