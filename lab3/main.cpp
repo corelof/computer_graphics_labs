@@ -22,7 +22,7 @@ int main(int argc, char *argv[]) {
         gradient = (string(argv[3]) == "1");
         algo = atoi(argv[4]);
         bit = atoi(argv[5]);
-        if(string(argv[6]) == "0")
+        if(string(argv[6]) == "0" || string(argv[6]) == "0.0")
         {
             gamma = 2.4;
             srgb = true;
