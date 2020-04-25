@@ -30,7 +30,7 @@ PGM_Image::PGM_Image(string filename, bool gradient, double gamma, bool srgb) {
     if(cc[0] != 'P' || cc[1] != '5')
         throw runtime_error("expected P5 format");
     fin >> width >> height >> color_depth;
-    image.assign(height, vector<unsigned char>(width));
+    image.assign(height, vector<int>(width));
     if(!gradient) {
         char pixel;
         fin.read(&pixel, 1);
@@ -129,7 +129,7 @@ void PGM_Image::dither(int bit, int algo, double gamma, bool srgb) {
         return;
     }
 
-    err.assign(height, vector<unsigned char>(width, 0));
+    err.assign(height, vector<int>(width, 0));
     // Floyd–Steinberg
     if(algo == 3) {
         for(int i = 0; i < height; i ++)
