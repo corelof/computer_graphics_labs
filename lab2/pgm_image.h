@@ -16,7 +16,7 @@ class PGM_Image{
     private:
         int width, height, color_depth;
         vector<vector<unsigned char>> image;
-        void plot(int, int, double, int, bool, double, bool);
+        void plot(int, int, double, int, double, bool);
     public:
         PGM_Image(string);
         void drop(string);
