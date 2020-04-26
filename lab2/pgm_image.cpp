@@ -112,6 +112,12 @@ void PGM_Image::plot(int x, int y, double brightness, int color, double gamma, b
 }
 
 void PGM_Image::draw_line(Point begin, Point end, double thikness, int color, double gamma, bool srgb) {
+    if(begin.y == end.y || begin.x == end.x) {
+        begin.x += 0.5;
+        end.x += 0.5;
+        begin.y += 0.5;
+        end.y += 0.5;
+    }
     Point line_vector = {end.x - begin.x, end.y - begin.y};
     Point th_vector = {1.0, 0.0};
     if(line_vector.x != 0)
