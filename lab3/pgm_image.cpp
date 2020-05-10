@@ -20,10 +20,12 @@ HalftoneMatrix = {
     {5, 9, 3, 1},
 };
 
-unsigned char sum_with_of(unsigned char a, int b, int cd) {
-    int res = (int)a + b;
-    if(res <= 0) return 0;
-    if(res > cd) return cd;
+double sum_with_of(double a, double b) {
+    double res = a + b;
+    if(res <= 0.0)
+        return 0.0;
+    if(res >= 1.0)
+        return 1.0;
     return res;
 }
 
@@ -37,31 +39,28 @@ PGM_Image::PGM_Image(string filename, bool gradient, double gamma, bool srgb) {
     if(cc[0] != 'P' || cc[1] != '5')
         throw runtime_error("expected P5 format");
     fin >> width >> height >> color_depth;
-    image.assign(height, vector<unsigned char>(width));
-    if(!gradient) {
-        char pixel;
-        fin.read(&pixel, 1);
-        for(int i = 0; i < height; i ++)
-            for(int j = 0; j < width; j ++)
-            {
+    image.assign(height, vector<double>(width));
+    char pixel;
+    fin.read(&pixel, 1);
+    for(int i = 0; i < height; i ++)
+        for(int j = 0; j < width; j ++)
+        {
+            if(!gradient) {
                 fin.read(&pixel, sizeof(unsigned char));
                 double old = (double)((unsigned char)pixel) / (double)color_depth;
                 if(srgb)
                     old = (old < 0.04045 ? old / 12.92 : pow((old + 0.055) / 1.055, gamma));
                 else
                     old = pow(old, gamma);
-                image[i][j] = round(old * color_depth);
+                image[i][j] = old;
+            } else {
+                image[i][j] = j*ld1 / (width - 1);
             }
-    } else {
-        for(int i = 0; i < height; i ++)
-            for(int j = 0; j < width; j ++)
-                image[i][j] = round(j*ld1 / (width - 1) * color_depth);
-    }
+        }
     fin.close();
 }
 
 void PGM_Image::drop(string filename, double gamma, bool srgb, int bit) {
-    int ocd = color_depth;
     color_depth = (1 << bit) - 1;
     ofstream fout(filename, ios::binary);
     if(!fout.is_open()) {
@@ -71,7 +70,7 @@ void PGM_Image::drop(string filename, double gamma, bool srgb, int bit) {
     for(int i = 0; i < height; i ++)
         for(int j = 0; j < width; j ++)
         {
-            double old = (double)image[i][j] / ocd;
+            double old = image[i][j];
             if(srgb)
                 old = (old <= 0.0031308 ? old * 12.92 : pow(old,  ld1/gamma)*1.055 - 0.055);
             else
@@ -84,23 +83,8 @@ void PGM_Image::drop(string filename, double gamma, bool srgb, int bit) {
 }
 
 void PGM_Image::dither(int bit, int algo, double gamma, bool srgb) {
-    auto nearest_color = [&bit, this](int pixel_color){        
-        vector<unsigned char> res(8);
-        vector<unsigned char> mask;
-        int idx = 7;
-        for(int i = 0; i < bit; i ++) {
-            mask.push_back((pixel_color >> idx) % 2);
-            idx--;
-        }
-        idx = 0;
-        for(int i = 0; i < 8; i ++) {
-            res[i] = mask[idx];
-            idx = (idx + 1) % mask.size();
-        }
-        unsigned char cl = 0;
-        for(auto i : res)
-            cl = cl * 2 + i;
-        return cl;
+    auto nearest_color = [&bit, this](double pixel_color){        
+        return round(pixel_color * ((1 << bit) - 1)) / ((1 << bit) - 1);
     };
 
     // No dithering
@@ -116,8 +100,8 @@ void PGM_Image::dither(int bit, int algo, double gamma, bool srgb) {
         for(int i = 0; i < height; i ++)
             for(int j = 0; j < width; j ++)
             {
-                int potpl = (color_depth + 1) / 64 *(OrderedDitheringMatrix[i%8][j%8] - 32);
-                image[i][j] = nearest_color(sum_with_of(image[i][j], potpl, color_depth));
+                double potpl = (OrderedDitheringMatrix[i%8][j%8] / 64.0) - 0.5;
+                image[i][j] = nearest_color(sum_with_of(image[i][j], potpl));
             }
         return;
     }
@@ -126,8 +110,8 @@ void PGM_Image::dither(int bit, int algo, double gamma, bool srgb) {
         for(int i = 0; i < height; i ++)
             for(int j = 0; j < width; j ++)
             {
-                int potpl = rand() % (color_depth+1) - (color_depth+1) / 2;
-                image[i][j] = nearest_color(sum_with_of(image[i][j], potpl, color_depth));
+                double potpl = rand() * 1.0 / (RAND_MAX-1) - 0.5;
+                image[i][j] = nearest_color(sum_with_of(image[i][j], potpl));
             }
         return;
     }
@@ -136,30 +120,30 @@ void PGM_Image::dither(int bit, int algo, double gamma, bool srgb) {
         for(int i = 0; i < height; i ++)
             for(int j = 0; j < width; j ++)
             {
-                int potpl = (color_depth + 1) / 16 *(HalftoneMatrix[i%4][j%4] - 8);
-                image[i][j] = nearest_color(sum_with_of(image[i][j], potpl, color_depth));
+                double potpl = HalftoneMatrix[i%4][j%4]/16.0 - 0.5;
+                image[i][j] = nearest_color(sum_with_of(image[i][j], potpl));
             }
         return;
     }
 
-    err.assign(height, vector<short>(width, 0));
+    err.assign(height, vector<double>(width, 0));
     // Floyd–Steinberg
     if(algo == 3) {
         for(int i = 0; i < height; i ++)
             for(int j = 0; j < width; j ++)
             {
-                image[i][j] = sum_with_of(image[i][j], (int)err[i][j], color_depth);
-                unsigned char nc = nearest_color(image[i][j]);
-                double error = ((short)image[i][j] - (short)nc) / 16.0;
+                image[i][j] = sum_with_of(image[i][j], err[i][j]);
+                double nc = nearest_color(image[i][j]);
+                double error = (image[i][j] - nc) / 16.0;
                 image[i][j] = nc;
                 if(j + 1 < width)
-                    err[i][j+1] += round(error * 7);
+                    err[i][j+1] += error * 7;
                 if(i + 1 < height) {
                     if(j - 1 >= 0)
-                        err[i+1][j-1] += round(error * 3);
-                    err[i+1][j] += round(error * 5);
+                        err[i+1][j-1] += error * 3;
+                    err[i+1][j] += error * 5;
                     if(j + 1 < width)
-                        err[i+1][j+1] += round(error);
+                        err[i+1][j+1] += error;
                 }
             }
         return;
@@ -169,27 +153,27 @@ void PGM_Image::dither(int bit, int algo, double gamma, bool srgb) {
         for(int i = 0; i < height; i ++)
             for(int j = 0; j < width; j ++)
             {
-                image[i][j] = sum_with_of(image[i][j], (int)err[i][j], color_depth);
-                unsigned char nc = nearest_color(image[i][j]);
-                double error = ((short)image[i][j] - (short)nc) / 48.0;
+                image[i][j] = sum_with_of(image[i][j], err[i][j]);
+                double nc = nearest_color(image[i][j]);
+                double error = (image[i][j] - nc) / 48.0;
                 image[i][j] = nc;
-                if(j + 1 < width) err[i][j+1] += round(error * 7);
-                if(j + 2 < width) err[i][j+2] += round(error * 5);
+                if(j + 1 < width) err[i][j+1] += error * 7;
+                if(j + 2 < width) err[i][j+2] += error * 5;
                 if(i + 1 < height)
                 {
-                    if(j - 2 >= 0) err[i+1][j-2] += round(error * 3);
-                    if(j - 1 >= 0) err[i+1][j-1] += round(error * 5);
-                    err[i+1][j] += round(error * 7);
-                    if(j + 1 < width) err[i+1][j+1] += round(error * 5);
-                    if(j + 2 < width) err[i+1][j+2] += round(error * 3);
+                    if(j - 2 >= 0) err[i+1][j-2] += error * 3;
+                    if(j - 1 >= 0) err[i+1][j-1] += error * 5;
+                    err[i+1][j] += error * 7;
+                    if(j + 1 < width) err[i+1][j+1] += (error * 5);
+                    if(j + 2 < width) err[i+1][j+2] += (error * 3);
                 }
                 if(i + 2 < height)
                 {
-                    if(j - 2 >= 0) err[i+2][j-2] += round(error * 1);
-                    if(j - 1 >= 0) err[i+2][j-1] += round(error * 3);
-                    err[i+2][j] += round(error * 5);
-                    if(j + 1 < width) err[i+2][j+1] += round(error * 3);
-                    if(j + 2 < width) err[i+2][j+2] += round(error * 1);
+                    if(j - 2 >= 0) err[i+2][j-2] += (error * 1);
+                    if(j - 1 >= 0) err[i+2][j-1] += (error * 3);
+                    err[i+2][j] += (error * 5);
+                    if(j + 1 < width) err[i+2][j+1] += (error * 3);
+                    if(j + 2 < width) err[i+2][j+2] += (error * 1);
                 }
             }
         return;
@@ -199,25 +183,25 @@ void PGM_Image::dither(int bit, int algo, double gamma, bool srgb) {
         for(int i = 0; i < height; i ++)
             for(int j = 0; j < width; j ++)
             {
-                image[i][j] = sum_with_of(image[i][j], (int)err[i][j], color_depth);
-                unsigned char nc = nearest_color(image[i][j]);
-                double error = ((short)image[i][j] - (short)nc) / 32.0;
+                image[i][j] = sum_with_of(image[i][j], err[i][j]);
+                double nc = nearest_color(image[i][j]);
+                double error = (image[i][j] - nc) / 32.0;
                 image[i][j] = nc;
-                if(j + 1 < width) err[i][j+1] += round(error * 5);
-                if(j + 2 < width) err[i][j+2] += round(error * 3);
+                if(j + 1 < width) err[i][j+1] += (error * 5);
+                if(j + 2 < width) err[i][j+2] += (error * 3);
                 if(i + 1 < height)
                 {
-                    if(j - 2 >= 0) err[i+1][j-2] += round(error * 2);
-                    if(j - 1 >= 0) err[i+1][j-1] += round(error * 4);
-                    err[i+1][j] += round(error * 5);
-                    if(j + 1 < width) err[i+1][j+1] += round(error * 4);
-                    if(j + 2 < width) err[i+1][j+2] += round(error * 2);
+                    if(j - 2 >= 0) err[i+1][j-2] += (error * 2);
+                    if(j - 1 >= 0) err[i+1][j-1] += (error * 4);
+                    err[i+1][j] += (error * 5);
+                    if(j + 1 < width) err[i+1][j+1] += (error * 4);
+                    if(j + 2 < width) err[i+1][j+2] += (error * 2);
                 }
                 if(i + 2 < height)
                 {
-                    if(j - 1 >= 0) err[i+2][j-1] += round(error * 2);
-                    err[i+2][j] += round(error * 3);
-                    if(j + 1 < width) err[i+2][j+1] += round(error * 2);
+                    if(j - 1 >= 0) err[i+2][j-1] += (error * 2);
+                    err[i+2][j] += (error * 3);
+                    if(j + 1 < width) err[i+2][j+1] += (error * 2);
                 }
             }
         return;
@@ -227,22 +211,21 @@ void PGM_Image::dither(int bit, int algo, double gamma, bool srgb) {
         for(int i = 0; i < height; i ++)
             for(int j = 0; j < width; j ++)
             {
-                image[i][j] = sum_with_of(image[i][j], (int)err[i][j], color_depth);
-                unsigned char nc = nearest_color(image[i][j]);
-                double error = ((short)image[i][j] - (short)nc) / 8.0;
+                image[i][j] = sum_with_of(image[i][j], err[i][j]);
+                double nc = nearest_color(image[i][j]);
+                double error = (image[i][j] - nc) / 8.0;
                 image[i][j] = nc;
-                short err_or = round(error);
-                if(j + 1 < width) err[i][j+1] += err_or;
-                if(j + 2 < width) err[i][j+2] += err_or;
+                if(j + 1 < width) err[i][j+1] += error;
+                if(j + 2 < width) err[i][j+2] += error;
                 if(i + 1 < height)
                 {
-                    if(j - 1 >= 0) err[i+1][j-1] += err_or;
-                    err[i+1][j] += err_or;
-                    if(j + 1 < width) err[i+1][j+1] += err_or;
+                    if(j - 1 >= 0) err[i+1][j-1] += error;
+                    err[i+1][j] += error;
+                    if(j + 1 < width) err[i+1][j+1] += error;
                 }
                 if(i + 2 < height)
                 {
-                    err[i+2][j] += err_or;
+                    err[i+2][j] += error;
                 }
             }
         return;

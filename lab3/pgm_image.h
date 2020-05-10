@@ -9,8 +9,8 @@ using namespace std;
 class PGM_Image{
     private:
         int width, height, color_depth;
-        vector<vector<unsigned char>> image;
-        vector<vector<short>> err;
+        vector<vector<double>> image;
+        vector<vector<double>> err;
     public:
         PGM_Image(string, bool, double, bool);
         void drop(string, double, bool, int);
