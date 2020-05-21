@@ -1,5 +1,6 @@
 #include "pgm_image.h"
 #include <cmath>
+#include <iostream>
 
 const double ld1 = 1;
 
@@ -75,7 +76,7 @@ void PGM_Image::drop(string filename, double gamma, bool srgb, int bit) {
                 old = (old <= 0.0031308 ? old * 12.92 : pow(old,  ld1/gamma)*1.055 - 0.055);
             else
                 old = pow(old, ld1 / gamma);
-            int color = old * color_depth;
+            int color = round(old * (double)color_depth);
             fout << (unsigned char)color;
         }
     fout.flush();
