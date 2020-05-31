@@ -55,6 +55,7 @@ int main(int argc, char *argv[]) {
     catch(const std::exception& e)
     {
         cerr << e.what() << '\n';
+        delete(img);
         return 1;
     }
 
@@ -66,7 +67,9 @@ int main(int argc, char *argv[]) {
     catch(const std::exception& e)
     {
         cerr << e.what() << '\n';
+        delete(img);
         return 1;
     }
+    delete(img);
     return 0;
 }

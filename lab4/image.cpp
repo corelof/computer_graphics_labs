@@ -239,31 +239,38 @@ pixel RGB_to_HSL(pixel p) {
 }
 
 pixel HSV_to_RGB(pixel px) {
-    int h = round(px.f * 360.0 / 255.0);
+    double h = px.f / 255.0 * 360.0;
     double s = px.s / 255.0;
     double v = px.t / 255.0;
     double c = v * s;
-    double x = c * (1.0 - abs(h/120.0-1.0));
+    double hh = h / 60;
+    double x = c * (1 - abs(((int) hh) % 2 + (hh - (int)hh) - 1));
     double m = v - c;
     double r, g, b;
-    if(h >= 0 && h < 60)
-        r = c, g = x*2, b = 0;
-    else if(h >= 60 && h < 120)
+    if(h >= 0 && h <= 60)
+        r = c, g = x, b = 0;
+    else if(h >= 60 && h <= 120)
         r = x, g = c, b = 0;
-    else if(h >= 120 && h < 180)
+    else if(h >= 120 && h <= 180)
         r = 0, g = c, b = x;
-    else if(h >= 180 && h < 240)
+    else if(h >= 180 && h <= 240)
         r = 0, g = x, b = c;
-    else if(h >= 240 && h < 300)
+    else if(h >= 240 && h <= 300)
         r = x, g = 0, b = c;
     else
-        r = c, g = 0, b = x/2;
+        r = c, g = 0, b = x;
 
-    return pixel{
-        (unsigned char)round((r + m) * 255),
-        (unsigned char)round((g + m) * 255),
-        (unsigned char)round((b + m) * 255)
-    };
+    int rr = (int)(round((r + m) * 255));
+    int gg = (int)(round((g + m) * 255));
+    int bb = (int)(round((b + m) * 255));
+
+    if(rr < 0) rr = 0;
+    if(rr > 255) rr = 255;
+    if(bb < 0) bb = 0;
+    if(bb > 255) bb = 255;
+    if(gg < 0) gg = 0;
+    if(gg > 255) gg = 255;
+    return pixel{(unsigned char)rr, (unsigned char)gg, (unsigned char)bb};
 }
 
 pixel RGB_to_HSV(pixel px) {
@@ -272,26 +279,27 @@ pixel RGB_to_HSV(pixel px) {
     double b = px.t * 1.0 / 255;
     double mx = max(r, max(g, b));
     double mn = min(r, min(g, b));
-    double h, s, v = mx;
-    if(mx == 0)
-        s = 0.0;
-    else
-        s = 1 - (mn / mx);
-    if(mx == mn)
+    double h, s, v = mx, c = mx - mn;
+
+    if(c == 0)
         h = 0;
-    else if(r == mx && g >= b)
-        h = (g - b) / (mx - mn) * 60;
-    else if(r == mx && g < b)
-        h = (g - b) / (mx - mn) * 60 + 360;
-    else if(mx == g)
-        h = (b - r) / (mx-mn) * 60 + 120;
-    else if(mx == b)
-        h = (r - g) / (mx-mn)* 60 + 240;
+    else if(v == r)
+        h = (g - b) / c;
+    else if(v == g)
+        h = 2 + (b - r) / c;
+    else
+        h = 4 + (r - g) / c;
+
+    h *= 60.0;
+    if(h < 0)
+        h += 360;
+
+    s = (v == 0 ? 0 : c / v);
 
     return pixel{
-        (unsigned char)round(h*255 / 360),
-        (unsigned char)round(s*255),
-        (unsigned char)round(v*255)
+        (unsigned char)round(h/360.0*255.0),
+        (unsigned char)round(s*255.0),
+        (unsigned char)round(v*255.0)
     };
 }
 
@@ -308,8 +316,14 @@ pixel RGB_to_YCoCg(pixel px) {
     double g = px.s * 1.0 / 255;
     double b = px.t * 1.0 / 255;
     double y = r / 4 + g / 2 + b / 4;
-    double co = r / 2 -  b / 2;
-    double cg = -r / 4 + g / 2 - b / 4;
+    double co = r / 2 -  b / 2 + 0.5;
+    double cg = -r / 4 + g / 2 - b / 4 + 0.5;
+    if(y > 1.0) y = 1.0;
+    if(y < 0) y = 0;
+    if(co > 1.0) co = 1.0;
+    if(co < 0) co = 0;
+    if(cg > 1.0) cg = 1.0;
+    if(cg < 0) cg = 0;
     return pixel{
         (unsigned char)(y*255),
         (unsigned char)(co*255),
@@ -319,11 +333,19 @@ pixel RGB_to_YCoCg(pixel px) {
 
 pixel YCoCg_to_RGB(pixel px) {
     double y = px.f * 1.0 / 255;
-    double co = px.s * 1.0 / 255;
-    double cg = px.t * 1.0 / 255;
+    double co = px.s * 1.0 / 255 - 0.5;
+    double cg = px.t * 1.0 / 255 - 0.5;
     double r = y + co - cg;
     double g = y + cg;
     double b = y - co - cg;
+
+    if(r > 1.0) r = 1.0;
+    if(r < 0) r = 0;
+    if(g > 1.0) g = 1.0;
+    if(g < 0) g = 0;
+    if(b > 1.0) b = 1.0;
+    if(b < 0) b = 0;
+
     return pixel{
         (unsigned char)(r*255),
         (unsigned char)(g*255),
